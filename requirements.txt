@@ -1,5 +1,5 @@
 streamlit
 py-zerox
-opeani
+openai
 Pillow
 pyperclip
