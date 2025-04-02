@@ -1,5 +1,5 @@
 streamlit
-asyncio
 py-zerox
+opeani
+Pillow
 pyperclip
-pathlib
