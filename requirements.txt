@@ -1,5 +1,5 @@
 streamlit
 asyncio
-pyzerox
+py-zerox
 pyperclip
 pathlib
