@@ -18,8 +18,13 @@ try:
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
-    st.warning("Langchain 관련 라이브러리가 설치되지 않았습니다. 이미지 직접 처리가 제한될 수 있습니다.")
-    st.warning("pip install langchain langchain-openai")
+
+# Streamlit Clipboard 임포트
+try:
+    from streamlit_clipboard import st_clipboard
+    CLIPBOARD_AVAILABLE = True
+except ImportError:
+    CLIPBOARD_AVAILABLE = False
 
 # --- 기본 프롬프트 정의 ---
 DEFAULT_SYSTEM_PROMPT = """
@@ -29,7 +34,7 @@ DEFAULT_SYSTEM_PROMPT = """
 페이지 번호가 나와있다면 내용의 가장 마지막에 {p.#}의 형태로 페이지 번호를 함께 제시해주세요.
 """
 
-# --- Streamlit Secrets에서 API 키 확인 및 설정 ---
+# --- Streamlit Secrets 설정 ---
 openai_api_key = st.secrets.get("OPENAI_API_KEY")
 
 if not openai_api_key:
@@ -39,19 +44,17 @@ if not openai_api_key:
 else:
     os.environ["OPENAI_API_KEY"] = openai_api_key
 
-# --- 세션 상태 초기화 ---
-if 'ocr_result' not in st.session_state:
-    st.session_state.ocr_result = None
-if 'extracted_text' not in st.session_state:
-    st.session_state.extracted_text = ""
-if 'processing_done' not in st.session_state:
-    st.session_state.processing_done = False
-if 'last_processed_type' not in st.session_state:
-    st.session_state.last_processed_type = None
+# --- 세션 상태 초기화 (플래그 추가) ---
+if 'ocr_result' not in st.session_state: st.session_state.ocr_result = None
+if 'extracted_text' not in st.session_state: st.session_state.extracted_text = ""
+if 'processing_done' not in st.session_state: st.session_state.processing_done = False
+if 'last_processed_type' not in st.session_state: st.session_state.last_processed_type = None
+if 'copy_and_clear_triggered' not in st.session_state:
+    st.session_state.copy_and_clear_triggered = False
 
 # --- 앱 UI 구성 ---
 st.title("Koreanssam OCR")
-st.write("PDF 또는 이미지 파일에서 텍스트를 추출합니다. API 키는 Streamlit Secrets를 통해 관리됩니다.")
+st.write("PDF 또는 이미지 파일에서 텍스트를 추출하여 Markdown파일로 변경합니다.")
 
 uploaded_file = st.file_uploader(
     "텍스트를 추출할 PDF 또는 이미지 파일을 업로드하세요",
@@ -164,31 +167,37 @@ if uploaded_file is not None and st.button("텍스트 추출 시작", key="start
             else:
                 st.error(f"지원하지 않는 파일 타입입니다: {file_type}. PDF 또는 이미지를 업로드해주세요.")
 
-# --- 결과 표시 및 상호작용 (약간 수정) ---
+# --- 결과 표시 및 상호작용 (수정) ---
 if st.session_state.processing_done and st.session_state.extracted_text:
+
+    if st.session_state.copy_and_clear_triggered:
+        st.success("텍스트가 클립보드에 복사되었습니다! 결과가 지워집니다.")
+        if CLIPBOARD_AVAILABLE:
+            pass
+
     st.markdown("---")
     st.subheader("📄 추출된 텍스트 결과")
+    st.text_area("결과", st.session_state.extracted_text, height=300, key="result_text_area", disabled=False)
 
-    # 결과 텍스트 영역 (스크롤 가능하게)
-    st.text_area("결과", st.session_state.extracted_text, height=300, key="result_text_area", disabled=True)
-
-    col1, col2, col3 = st.columns([1, 1, 2])
+    col1, col2 = st.columns([1.5, 2])
 
     with col1:
         if st.button("📋 텍스트 복사 및 지우기", key="copy_clear_button"):
-            try:
-                pyperclip.copy(st.session_state.extracted_text)
-                st.success("텍스트가 클립보드에 복사되었습니다! 결과가 지워집니다.")
+            if CLIPBOARD_AVAILABLE:
+                st_clipboard(st.session_state.extracted_text, label="📋 복사됨 (클릭 불필요, 아래 메시지 확인)", key="clipboard_auto")
+                st.success("텍스트가 클립보드에 복사되었습니다! 결과는 지워집니다.")
                 st.session_state.ocr_result = None
                 st.session_state.extracted_text = ""
                 st.session_state.processing_done = False
                 st.session_state.last_processed_type = None
+                st.session_state.copy_and_clear_triggered = False
                 st.rerun()
-            except Exception as e:
-                st.error(f"클립보드 작업 중 오류 발생: {e}")
+            else:
+                st.error("클립보드 기능을 사용할 수 없습니다.")
 
     with col2:
         download_filename = "extracted_text.txt"
+        mime_type = "text/plain"
         if st.session_state.last_processed_type == 'pdf' and st.session_state.ocr_result:
             original_filename_stem = Path(st.session_state.ocr_result.file_name).stem
             download_filename = f"{original_filename_stem}_extracted.md"
@@ -196,8 +205,6 @@ if st.session_state.processing_done and st.session_state.extracted_text:
         elif st.session_state.last_processed_type == 'image' and uploaded_file:
             original_filename_stem = Path(uploaded_file.name).stem
             download_filename = f"{original_filename_stem}_extracted.txt"
-            mime_type = "text/plain"
-        else:
             mime_type = "text/plain"
 
         st.download_button(
@@ -207,3 +214,5 @@ if st.session_state.processing_done and st.session_state.extracted_text:
             mime=mime_type,
             key="download_button"
         )
+
+    st.markdown("---")
