@@ -24,7 +24,7 @@ DEFAULT_SYSTEM_PROMPT = """
 파일에 있는 텍스트만 출력하세요.
 파일에서 텍스트를 추출하고 마크다운 형식으로 변환해주세요.
 표와 구조를 최대한 유지해주세요.
-페이지 번호가 나와있다면 내용의 가장 마지막에 {p.#}의 형태로 페이지 번호를 함께 제시해주세요.
+페이지 번호가 나와있다면 내용의 가장 마지막에 p.# 의 형태로 페이지 번호를 함께 제시해주세요.
 """
 
 # --- Streamlit Secrets 설정 ---
@@ -97,7 +97,7 @@ if uploaded_file is not None and st.button("텍스트 추출 시작", key="start
             async def process_pdf_async(f_path, s_pages):
                 try:
                     result: ZeroxOutput = await zerox(
-                        file_path=f_path, model="gpt-4o-mini",
+                        file_path=f_path, model="gpt-4o",
                         output_dir="./output", custom_system_prompt=DEFAULT_SYSTEM_PROMPT,
                         select_pages=s_pages
                     )
@@ -137,7 +137,7 @@ if uploaded_file is not None and st.button("텍스트 추출 시작", key="start
                 mime_type = guess_type(uploaded_file.name)[0] or file_type
                 image_url = f"data:{mime_type};base64,{base64_image}"
 
-                llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key, max_tokens=4000)
+                llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key, max_tokens=4000)
                 message = HumanMessage(content=[
                     {"type": "text", "text": DEFAULT_SYSTEM_PROMPT},
                     {"type": "image_url", "image_url": {"url": image_url}}
