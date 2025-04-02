@@ -3,3 +3,5 @@ py-zerox
 openai
 Pillow
 pyperclip
+langchain
+langchain-openai
