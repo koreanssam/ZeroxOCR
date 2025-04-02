@@ -19,13 +19,6 @@ try:
 except ImportError:
     LANGCHAIN_AVAILABLE = False
 
-# Streamlit Clipboard 임포트
-try:
-    from streamlit_clipboard import st_clipboard
-    CLIPBOARD_AVAILABLE = True
-except ImportError:
-    CLIPBOARD_AVAILABLE = False
-
 # --- 기본 프롬프트 정의 ---
 DEFAULT_SYSTEM_PROMPT = """
 파일에 있는 텍스트만 출력하세요.
@@ -172,40 +165,27 @@ if st.session_state.processing_done and st.session_state.extracted_text:
     st.markdown("---")
     st.subheader("📄 추출된 텍스트 결과")
 
-    # 결과 텍스트 영역 (읽기/쓰기 가능하게 두거나, 복사 후 직접 지울 수 있도록)
-    st.text_area("결과", st.session_state.extracted_text, height=300, key="result_text_area", disabled=False)
+    # --- st.code() 사용으로 변경 ---
+    st.code(st.session_state.extracted_text, language="markdown", line_numbers=False)
 
-    col1, col2 = st.columns([1, 2]) # 버튼 배치를 위한 컬럼
-
-    with col1:
-        # --- '텍스트 복사' 버튼 (streamlit-clipboard 사용) ---
-        if CLIPBOARD_AVAILABLE:
-            st_clipboard(st.session_state.extracted_text, label="📋 텍스트 복사", key="clipboard_button")
-            # 성공 메시지는 st_clipboard 컴포넌트 자체에서 처리하거나,
-            # 필요하다면 아래에 st.success("클립보드에 복사되었습니다!") 등을 추가할 수 있지만,
-            # 보통 컴포넌트의 버튼 클릭 시 시각적 피드백이 있으므로 필수는 아님.
-        else:
-            st.warning("클립보드 컴포넌트를 로드할 수 없습니다.")
-
-    with col2: # 다운로드 버튼
-        download_filename = "extracted_text.txt"
+    # --- 다운로드 버튼은 그대로 유지 (st.code 아래에 표시) ---
+    download_filename = "extracted_text.txt"
+    mime_type = "text/plain"
+    if st.session_state.last_processed_type == 'pdf' and st.session_state.ocr_result:
+        original_filename_stem = Path(st.session_state.ocr_result.file_name).stem
+        download_filename = f"{original_filename_stem}_extracted.md"
+        mime_type = "text/markdown"
+    elif st.session_state.last_processed_type == 'image' and uploaded_file:
+        original_filename_stem = Path(uploaded_file.name).stem
+        download_filename = f"{original_filename_stem}_extracted.txt"
         mime_type = "text/plain"
-        # ... (다운로드 파일 이름 및 타입 결정 로직 - 이전과 동일) ...
-        if st.session_state.last_processed_type == 'pdf' and st.session_state.ocr_result:
-            original_filename_stem = Path(st.session_state.ocr_result.file_name).stem
-            download_filename = f"{original_filename_stem}_extracted.md"
-            mime_type = "text/markdown"
-        elif st.session_state.last_processed_type == 'image' and uploaded_file:
-            original_filename_stem = Path(uploaded_file.name).stem
-            download_filename = f"{original_filename_stem}_extracted.txt"
-            mime_type = "text/plain"
 
-        st.download_button(
-            label="💾 결과 다운로드",
-            data=st.session_state.extracted_text, # 텍스트는 지워지지 않으므로 항상 사용 가능
-            file_name=download_filename,
-            mime=mime_type,
-            key="download_button"
-        )
+    st.download_button(
+        label="💾 결과 다운로드",
+        data=st.session_state.extracted_text,
+        file_name=download_filename,
+        mime=mime_type,
+        key="download_button"
+    )
 
     st.markdown("---")
