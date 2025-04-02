@@ -1,0 +1,5 @@
+streamlit
+asyncio
+pyzerox
+pyperclip
+pathlib
