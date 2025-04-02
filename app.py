@@ -104,7 +104,7 @@ if uploaded_file is not None and st.button("텍스트 추출 시작", key="start
             async def process_pdf_async(f_path, s_pages):
                 try:
                     result: ZeroxOutput = await zerox(
-                        file_path=f_path, model="gpt-4o",
+                        file_path=f_path, model="gpt-4o-mini",
                         output_dir="./output", custom_system_prompt=DEFAULT_SYSTEM_PROMPT,
                         select_pages=s_pages
                     )
@@ -144,7 +144,7 @@ if uploaded_file is not None and st.button("텍스트 추출 시작", key="start
                 mime_type = guess_type(uploaded_file.name)[0] or file_type
                 image_url = f"data:{mime_type};base64,{base64_image}"
 
-                llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key, max_tokens=4000)
+                llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key, max_tokens=4000)
                 message = HumanMessage(content=[
                     {"type": "text", "text": DEFAULT_SYSTEM_PROMPT},
                     {"type": "image_url", "image_url": {"url": image_url}}
