@@ -3,5 +3,6 @@ py-zerox
 openai
 Pillow
 pyperclip
+streamlit-clipboard
 langchain
 langchain-openai
